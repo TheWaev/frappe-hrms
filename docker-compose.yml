@@ -12,17 +12,20 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
     volumes:
       - db-data:/var/lib/mysql
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   redis-cache:
     image: redis:6.2-alpine
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   redis-queue:
     image: redis:6.2-alpine
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   backend:
@@ -40,12 +43,14 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   frontend:
     image: local/erpnext-hrms:latest
-    depends_on: [backend]
+    depends_on:
+      - backend
     command: ["nginx-entrypoint.sh"]
     environment:
       BACKEND: backend:8000
@@ -59,10 +64,11 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
     ports:
-      - "8060:8060"
+      - "8090:8080"
 
   websocket:
     image: local/erpnext-hrms:latest
@@ -73,7 +79,8 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   scheduler:
@@ -82,7 +89,8 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
 
   worker:
@@ -94,39 +102,9 @@ services:
     volumes:
       - sites:/home/frappe/frappe-bench/sites
       - logs:/home/frappe/frappe-bench/logs
-    networks: [frappe]
+    networks:
+      frappe:
     restart: unless-stopped
-
-  # One-time container: creates the site & installs ERPNext + HRMS.
-  # You can remove/disable it after it succeeds.
-  create-site:
-  image: local/erpnext-hrms:latest
-  depends_on:
-    - db
-    - redis-cache
-    - redis-queue
-    - backend
-  entrypoint: ["bash", "-c"]
-  command: |
-    sleep 20;
-    bench set-config -g db_host db;
-    bench set-config -g redis_cache "redis://redis-cache:6379";
-    bench set-config -g redis_queue "redis://redis-queue:6379";
-    bench set-config -g redis_socketio "redis://redis-queue:6379";
-    bench new-site ${SITE_NAME} \
-      --mariadb-user-host-login-scope='%' \
-      --admin-password ${ADMIN_PASSWORD} \
-      --db-root-username root \
-      --db-root-password ${DB_ROOT_PASSWORD} \
-      --install-app erpnext \
-      --install-app hrms;
-    echo "SITE CREATION COMPLETE";
-  volumes:
-    - sites:/home/frappe/frappe-bench/sites
-    - logs:/home/frappe/frappe-bench/logs
-  networks:
-    - frappe
-  restart: "no"
 
 volumes:
   db-data:
