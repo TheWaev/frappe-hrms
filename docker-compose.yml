@@ -99,7 +99,7 @@ services:
 
   # One-time container: creates the site & installs ERPNext + HRMS.
   # You can remove/disable it after it succeeds.
-create-site:
+  create-site:
   image: local/erpnext-hrms:latest
   depends_on:
     - db
